@@ -49,13 +49,13 @@ def servers():
 def server(server_id):
     if flask.request.method == 'GET':
         try:
-            srv = OpenVPNServer.find(server_id)
+            srv = OpenVPNServer(server_id)
             return flask.Response(srv.to_json(), status=200)
         except ServerNotFoundException:
             return flask.Response('Server not found', status=404)
     elif flask.request.method == 'DELETE':
         try:
-            srv = OpenVPNServer.find(server_id)
+            srv = OpenVPNServer(server_id)
             srv.delete()
             return flask.Response('Deleted', 200)
         except ServerNotFoundException:
@@ -66,7 +66,7 @@ def server(server_id):
             request_body = server_form_validator.validate(request_body)
             if len(set(request_body.keys()) - {'port', 'wan_routing', 'running'}) > 0:
                 return flask.Response('Bad request', status=400)
-            srv = OpenVPNServer.find(server_id)
+            srv = OpenVPNServer(server_id)
             srv.port = int(request_body.get('port', srv.port))
             srv.wan_routing = bool(request_body.get('wan_routing', srv.wan_routing))
             srv.running = bool(request_body.get('running', srv.running))
@@ -80,7 +80,7 @@ def server(server_id):
 @app.route('/server/<server_id>/clients', methods=['GET', 'POST'])
 def server_clients(server_id):
     try:
-        srv = OpenVPNServer.find(server_id)
+        srv = OpenVPNServer(server_id)
     except ServerNotFoundException:
         return flask.Response('Server not found', status=404)
     if flask.request.method == 'GET':

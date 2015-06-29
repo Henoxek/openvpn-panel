@@ -3,6 +3,7 @@ import json
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from exceptions import ServerNotFoundException
+from openvpn_client import OpenVPNClient, ClientNotFoundException
 
 
 db = MongoClient().vpnmanager
@@ -63,10 +64,13 @@ class OpenVPNServer(object):
             raise NotImplementedError
 
     def delete(self):
-        if self.id is None:
-            db.servers.update({'_id': ObjectId(self.id)}, {
-                '$set': {'is_deleted': True}
-            })
+        db.servers.update({'_id': ObjectId(self.id)}, {
+            '$set': {'is_deleted': True}
+        })
+        db.events.insert({
+            'type': 'delete_server',
+            'server_id': ObjectId(self.id)
+        })
 
     def _load(self):
         srv = db.servers.find_one({'$and': [{'_id': ObjectId(self.id)},
@@ -84,18 +88,13 @@ class OpenVPNServer(object):
         srvs = [srv for srv in db.servers.find({'is_deleted': False})]
         return [OpenVPNServer(str(srv['_id'])) for srv in srvs]
 
-    @staticmethod
-    def find(server_id):
-        srv = db.servers.find_one({'$and': [{'is_deleted': False},
-                                            {'_id': ObjectId(server_id)}]
-                                   })
-        if srv is None:
-            raise ServerNotFoundException(server_id)
-        return OpenVPNServer(srv['_id'])
-
     @property
     def clients(self):
-        raise NotImplementedError
+        return OpenVPNClient.find_all(self.id)
 
     def find_client(self, client_id):
+        clt = OpenVPNClient(client_id)
+        if clt.server_id != self.id:
+            raise ClientNotFoundException(client_id)
+
         raise NotImplementedError
