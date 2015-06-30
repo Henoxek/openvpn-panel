@@ -46,7 +46,12 @@ class OpenVPNClient(object):
                 'client_id': _id
             })
         else:
-            raise NotImplementedError
+            db.clients.update({'_id': ObjectId(self.id)}, {
+                'server_id': ObjectId(self.server_id),
+                'description': self.description,
+                'certificate': self.certificate,
+                'is_deleted': False
+            })
 
     def delete(self):
         db.clients.update({'_id': ObjectId(self.id)}, {

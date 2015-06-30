@@ -64,10 +64,13 @@ def server(server_id):
         request_body = json.loads(flask.request.data)
         try:
             request_body = server_form_validator.validate(request_body)
-            if len(set(request_body.keys()) - {'port', 'wan_routing', 'running'}) > 0:
+            if len(set(request_body.keys()) - {'protocol', 'port', 'wan_routing', 'running'}) > 0:
                 return flask.Response('Bad request', status=400)
             srv = OpenVPNServer(server_id)
             srv.port = int(request_body.get('port', srv.port))
+            srv.protocol = request_body.get('protocol', srv.protocol)
+            if srv.protocol not in ['tcp', 'udp']:
+                return flask.Response('Bad request', status=400)
             srv.wan_routing = bool(request_body.get('wan_routing', srv.wan_routing))
             srv.running = bool(request_body.get('running', srv.running))
             srv.save()

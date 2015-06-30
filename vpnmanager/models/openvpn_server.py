@@ -61,7 +61,30 @@ class OpenVPNServer(object):
                 'server_id': _id
             })
         else:
-            raise NotImplementedError
+            old_properties = db.servers.find({'_id': ObjectId(self.id)})
+            if (old_properties['port'] != self.port) or (old_properties['protocol'] != self.protocol):
+                db.events.insert({
+                    'type': 'server_reconfiguration_needed',
+                    'server_id': old_properties['_id']
+                })
+            if old_properties['wan_routing'] != self.wan_routing:
+                db.events.insert({
+                    'type': 'firewall_configuration_needed',
+                    'server_id': old_properties['_id']
+                })
+            if old_properties['running'] != self.running:
+                db.events.insert({
+                    'type': 'running_state_changed',
+                    'server_id': old_properties['_id']
+                })
+            db.servers.update({'_id': ObjectId(self.id)}, {
+                'name': self.name,
+                'protocol': self.protocol,
+                'port': self.port,
+                'wan_routing': self.wan_routing,
+                'running': self.running,
+                'is_deleted': False
+            })
 
     def delete(self):
         db.servers.update({'_id': ObjectId(self.id)}, {
@@ -96,5 +119,6 @@ class OpenVPNServer(object):
         clt = OpenVPNClient(client_id)
         if clt.server_id != self.id:
             raise ClientNotFoundException(client_id)
-
-        raise NotImplementedError
+        if clt.server_id != self.id:
+            raise ClientNotFoundException(client_id)
+        return clt
